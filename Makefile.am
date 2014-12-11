@@ -19,29 +19,14 @@ AUTOMAKE_OPTIONS = subdir-objects
 MESOS_ROOT_DIR=@MESOS_ROOT@
 MESOS_BUILD_DIR=@MESOS_BUILD_DIR@
 
-include $(MESOS_ROOT_DIR)/3rdparty/versions.am
-include $(MESOS_ROOT_DIR)/3rdparty/libprocess/3rdparty/versions.am
-
 LIBPROCESS = $(MESOS_ROOT_DIR)/3rdparty/libprocess
 STOUT = $(LIBPROCESS)/3rdparty/stout
-
-LIBPROCESS_BUILD = $(MESOS_BUILD_DIR)/3rdparty/libprocess
-BOOST = $(LIBPROCESS_BUILD)/3rdparty/boost-$(BOOST_VERSION)
-GLOG = $(LIBPROCESS_BUILD)/3rdparty/glog-$(GLOG_VERSION)
-PROTOBUF = $(LIBPROCESS_BUILD)/3rdparty/protobuf-$(PROTOBUF_VERSION)
-PICOJSON = $(LIBPROCESS_BUILD)/3rdparty/picojson-$(PICOJSON_VERSION)
-
 
 # Unfortunatley, 'pkglibexecdir' and 'pkgsysconfdir' are not set
 # before automake 1.11, so we need to set them manually (until we in
 # the future assume an automake version).
 pkglibexecdir = $(libexecdir)/$(PACKAGE)
 pkgsysconfdir = $(sysconfdir)/$(PACKAGE)
-
-# Protocol buffer compiler.
-PROTOC = $(PROTOBUF)/src/protoc
-
-PROTOCFLAGS = -I$(top_srcdir)/include -I$(srcdir)
 
 # Initialize variables here so we can use += operator everywhere else.
 lib_LTLIBRARIES =
@@ -65,14 +50,6 @@ MESOS_CPPFLAGS += -I$(LIBPROCESS)/include
 MESOS_CPPFLAGS += -I$(STOUT)/include
 
 MESOS_CPPFLAGS += -I$(MESOS_BUILD_DIR)/include
-
-# Header only dependencies will be ignored for --disable-bundled.
-MESOS_CPPFLAGS += -I$(BOOST)
-MESOS_CPPFLAGS += -I$(PICOJSON)
-
-MESOS_CPPFLAGS += -I$(PROTOBUF)/src
-MESOS_CPPFLAGS += -I$(GLOG)/src
-MESOS_CPPFLAGS += -I$(LEVELDB)/include
 
 # Library containing test CPU and memory isolator modules.
 lib_LTLIBRARIES += libtestisolator.la
