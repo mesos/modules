@@ -62,7 +62,8 @@ libtestisolator_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared
 # TODO(tillt): Enable optional building of this module library.
 # TODO(tillt): Make this module library installable. See MESOS-1940.
 lib_LTLIBRARIES += libtestauthentication.la
-libtestauthentication_la_SOURCES = authentication/test_authentication_modules.cpp
+libtestauthentication_la_SOURCES = authentication/test_authentication_modules.cpp \
+				   authentication/cram_md5/auxprop.cpp
 libtestauthentication_la_CPPFLAGS = $(MESOS_CPPFLAGS)
 libtestauthentication_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared
 

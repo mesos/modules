@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-#include "authentication/cram_md5/auxprop.hpp"
+#include <glog/logging.h> // Includes LOG(*), PLOG(*), CHECK, etc.
 
-#include "logging/logging.hpp"
+#include "authentication/cram_md5/auxprop.hpp"
 
 using std::list;
 using std::string;
