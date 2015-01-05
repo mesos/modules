@@ -18,21 +18,191 @@
 
 #include <mesos/mesos.hpp>
 #include <mesos/module.hpp>
+#include <mesos/module/isolator.hpp>
 
 #include <stout/try.hpp>
 
-#include "module/isolator.hpp"
-
-#include "slave/containerizer/isolator.hpp"
-#include "slave/containerizer/isolators/posix.hpp"
-#include "slave/flags.hpp"
-
 using namespace mesos;
 
-using mesos::internal::slave::Flags;
-using mesos::internal::slave::Isolator;
-using mesos::internal::slave::PosixCpuIsolatorProcess;
-using mesos::internal::slave::PosixMemIsolatorProcess;
+using mesos::Isolator;
+using mesos::internal::slave::state::RunState;
+
+// A basic IsolatorProcess that keeps track of the pid but doesn't do any
+// resource isolation. Subclasses must implement usage() for their appropriate
+// resource(s).
+class PosixIsolatorProcess : public IsolatorProcess
+{
+public:
+  virtual process::Future<Nothing> recover(
+      const std::list<RunState>& state)
+  {
+    foreach (const RunState& run, state) {
+      if (!run.id.isSome()) {
+        return process::Failure("ContainerID is required to recover");
+      }
+
+      if (!run.forkedPid.isSome()) {
+        return process::Failure("Executor pid is required to recover");
+      }
+
+      // This should (almost) never occur: see comment in
+      // PosixLauncher::recover().
+      if (pids.contains(run.id.get())) {
+        return process::Failure("Container already recovered");
+      }
+
+      pids.put(run.id.get(), run.forkedPid.get());
+
+      process::Owned<process::Promise<Limitation> > promise(
+          new process::Promise<Limitation>());
+      promises.put(run.id.get(), promise);
+    }
+
+    return Nothing();
+  }
+
+  virtual process::Future<Option<CommandInfo> > prepare(
+      const ContainerID& containerId,
+      const ExecutorInfo& executorInfo,
+      const std::string& directory,
+      const Option<std::string>& user)
+  {
+    if (promises.contains(containerId)) {
+      return process::Failure("Container " + stringify(containerId) +
+                              " has already been prepared");
+    }
+
+    process::Owned<process::Promise<Limitation> > promise(
+        new process::Promise<Limitation>());
+    promises.put(containerId, promise);
+
+    return None();
+  }
+
+  virtual process::Future<Nothing> isolate(
+      const ContainerID& containerId,
+      pid_t pid)
+  {
+    if (!promises.contains(containerId)) {
+      return process::Failure("Unknown container: " + stringify(containerId));
+    }
+
+    pids.put(containerId, pid);
+
+    return Nothing();
+  }
+
+  virtual process::Future<Limitation> watch(
+      const ContainerID& containerId)
+  {
+    if (!promises.contains(containerId)) {
+      return process::Failure("Unknown container: " + stringify(containerId));
+    }
+
+    return promises[containerId]->future();
+  }
+
+  virtual process::Future<Nothing> update(
+      const ContainerID& containerId,
+      const Resources& resources)
+  {
+    if (!promises.contains(containerId)) {
+      return process::Failure("Unknown container: " + stringify(containerId));
+    }
+
+    // No resources are actually isolated so nothing to do.
+    return Nothing();
+  }
+
+  virtual process::Future<Nothing> cleanup(const ContainerID& containerId)
+  {
+    if (!promises.contains(containerId)) {
+      return process::Failure("Unknown container: " + stringify(containerId));
+    }
+
+    // TODO(idownes): We should discard the container's promise here to signal
+    // to anyone that holds the future from watch().
+    promises.erase(containerId);
+
+    pids.erase(containerId);
+
+    return Nothing();
+  }
+
+protected:
+  hashmap<ContainerID, pid_t> pids;
+  hashmap<ContainerID,
+          process::Owned<process::Promise<Limitation> > > promises;
+};
+
+
+class PosixCpuIsolatorProcess : public PosixIsolatorProcess
+{
+public:
+  static Try<Isolator*> create()
+  {
+    process::Owned<IsolatorProcess> process(new PosixCpuIsolatorProcess());
+
+    return new Isolator(process);
+  }
+
+  virtual process::Future<ResourceStatistics> usage(
+      const ContainerID& containerId)
+  {
+    if (!pids.contains(containerId)) {
+      LOG(WARNING) << "No resource usage for unknown container '"
+                   << containerId << "'";
+      return ResourceStatistics();
+    }
+
+    // Use 'mesos-usage' but only request 'cpus_' values.
+    ResourceStatistics usage;
+    return usage;
+//      mesos::internal::usage(pids.get(containerId).get(), false, true);
+//    if (usage.isError()) {
+//      return process::Failure(usage.error());
+//    }
+//    return usage.get();
+  }
+
+private:
+  PosixCpuIsolatorProcess() {}
+};
+
+
+class PosixMemIsolatorProcess : public PosixIsolatorProcess
+{
+public:
+  static Try<Isolator*> create()
+  {
+    process::Owned<IsolatorProcess> process(new PosixMemIsolatorProcess());
+
+    return new Isolator(process);
+  }
+
+  virtual process::Future<ResourceStatistics> usage(
+      const ContainerID& containerId)
+  {
+    if (!pids.contains(containerId)) {
+      LOG(WARNING) << "No resource usage for unknown container '"
+                   << containerId << "'";
+      return ResourceStatistics();
+    }
+
+    ResourceStatistics usage;
+    return usage;
+//    // Use 'mesos-usage' but only request 'mem_' values.
+//    Try<ResourceStatistics> usage =
+//      mesos::internal::usage(pids.get(containerId).get(), true, false);
+//    if (usage.isError()) {
+//      return process::Failure(usage.error());
+//    }
+//    return usage.get();
+  }
+
+private:
+  PosixMemIsolatorProcess() {}
+};
 
 
 // The sole purpose of this function is just to exercise the
@@ -45,8 +215,7 @@ static bool compatible()
 
 static Isolator* createCpuIsolator(const Parameters& parameters)
 {
-  Flags flags;
-  Try<Isolator*> result = PosixCpuIsolatorProcess::create(flags);
+  Try<Isolator*> result = PosixCpuIsolatorProcess::create();
   if (result.isError()) {
     return NULL;
   }
@@ -56,8 +225,7 @@ static Isolator* createCpuIsolator(const Parameters& parameters)
 
 static Isolator* createMemIsolator(const Parameters& parameters)
 {
-  Flags flags;
-  Try<Isolator*> result = PosixMemIsolatorProcess::create(flags);
+  Try<Isolator*> result = PosixMemIsolatorProcess::create();
   if (result.isError()) {
     return NULL;
   }

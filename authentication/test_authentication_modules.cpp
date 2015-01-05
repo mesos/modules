@@ -19,19 +19,16 @@
 #include <mesos/mesos.hpp>
 #include <mesos/module.hpp>
 
-#include "authentication/authenticatee.hpp"
-#include "authentication/authenticator.hpp"
+#include <mesos/module/authenticatee.hpp>
+#include <mesos/module/authenticator.hpp>
 
-#include "authentication/cram_md5/authenticatee.hpp"
-#include "authentication/cram_md5/authenticator.hpp"
-
-#include "module/authenticatee.hpp"
-#include "module/authenticator.hpp"
+#include "cram_md5/authenticatee.hpp"
+#include "cram_md5/authenticator.hpp"
 
 using namespace mesos;
 
-using mesos::internal::Authenticatee;
-using mesos::internal::Authenticator;
+using mesos::Authenticatee;
+using mesos::Authenticator;
 
 static bool compatible()
 {

@@ -15,6 +15,12 @@ LT_INIT
 LT_LANG([C++])
 LT_OUTPUT
 
+AC_ARG_WITH([mesos],
+            [AS_HELP_STRING([--with-mesos=dir],
+                            [provide root dir for Mesos installation])],
+            [mesos=$withval],
+            [mesos=no])
+
 AC_ARG_WITH([mesos_root],
             [AS_HELP_STRING([--with-mesos-root=dir],
                             [provide root dir for Mesos sources])],
@@ -27,18 +33,25 @@ AC_ARG_WITH([mesos_build_dir],
             [mesos_build_dir=$withval],
             [mesos_build_dir=no])
 
-if test -d "$mesos_root"; then
-  AC_SUBST([MESOS_ROOT], [$mesos_root])
+if test -d "$mesos"; then
+  AC_SUBST([MESOS], [$mesos_dir])
+  AC_SUBST([MESOS_BUILD_DIR], [$mesos])
+  AC_SUBST([MESOS_ROOT], [$mesos])
 else
-  AC_MSG_ERROR([Invalid mesos path; use --with-mesos-root=<DIR>
-		DIR is the top-level directory of the Mesos distribution.])
-fi
 
-if test -d "$mesos_build_dir"; then
-  AC_SUBST([MESOS_BUILD_DIR], [$mesos_build_dir])
-else
-  AC_MSG_ERROR([Invalid mesos build path; use --with-mesos-build-dir=<DIR>
-		DIR is the Mesos build directory.])
+  if test -d "$mesos_root"; then
+    AC_SUBST([MESOS_ROOT], [$mesos_root])
+  else
+    AC_MSG_ERROR([Invalid mesos path; use --with-mesos-root=<DIR>
+                  <DIR> is the top-level directory of the Mesos distribution.])
+  fi
+
+  if test -d "$mesos_build_dir"; then
+    AC_SUBST([MESOS_BUILD_DIR], [$mesos_build_dir])
+  else
+    AC_MSG_ERROR([Invalid mesos build path; use --with-mesos-build-dir=<DIR>
+                  <DIR> is the Mesos build directory.])
+  fi
 fi
 
 # Check if we're using clang.
