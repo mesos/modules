@@ -45,3 +45,5 @@ mkdir build && cd build
 ../configure --with-mesos=/path/to/mesos/installation
 make
 ```
+
+At this point, the Module libraries are ready in `/build/.libs`.
