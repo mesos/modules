@@ -5,7 +5,6 @@ AC_LANG([C++])
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_CC_C_O
-AC_PROG_RANLIB
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([foreign])
@@ -34,25 +33,31 @@ AC_ARG_WITH([mesos_build_dir],
             [mesos_build_dir=no])
 
 if test -d "$mesos"; then
-  AC_SUBST([MESOS], [$mesos_dir])
-  AC_SUBST([MESOS_BUILD_DIR], [$mesos])
-  AC_SUBST([MESOS_ROOT], [$mesos])
+  MESOS_CPPFLAGS="-I${mesos}/include"
 else
 
   if test -d "$mesos_root"; then
-    AC_SUBST([MESOS_ROOT], [$mesos_root])
+    MESOS_CPPFLAGS="${MESOS_CPPFLAGS} -I${mesos_root}/include"
+
+    # Add libprocess to include path.
+    MESOS_CPPFLAGS="${MESOS_CPPFLAGS} -I${mesos_root}/3rdparty/libprocess/include"
+
+    # Add stout to include path.
+    MESOS_CPPFLAGS="${MESOS_CPPFLAGS} -I${mesos_root}/3rdparty/libprocess/3rdparty/stout/include"
   else
     AC_MSG_ERROR([Invalid mesos path; use --with-mesos-root=<DIR>
                   <DIR> is the top-level directory of the Mesos distribution.])
   fi
 
   if test -d "$mesos_build_dir"; then
-    AC_SUBST([MESOS_BUILD_DIR], [$mesos_build_dir])
+    MESOS_CPPFLAGS="${MESOS_CPPFLAGS} -I${mesos_build_dir}/include"
   else
     AC_MSG_ERROR([Invalid mesos build path; use --with-mesos-build-dir=<DIR>
                   <DIR> is the Mesos build directory.])
   fi
 fi
+
+AC_SUBST(MESOS_CPPFLAGS)
 
 # Check if we're using clang.
 AC_MSG_CHECKING([if compiling with clang])

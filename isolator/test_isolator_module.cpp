@@ -18,14 +18,18 @@
 
 #include <mesos/mesos.hpp>
 #include <mesos/module.hpp>
+
+#include <mesos/slave/isolator.hpp>
+#include <mesos/slave/state.hpp>
+
 #include <mesos/module/isolator.hpp>
 
 #include <stout/try.hpp>
 
 using namespace mesos;
+using namespace mesos::slave;
+using namespace mesos::slave::state;
 
-using mesos::Isolator;
-using mesos::internal::slave::state::RunState;
 
 // A basic IsolatorProcess that keeps track of the pid but doesn't do any
 // resource isolation. Subclasses must implement usage() for their appropriate

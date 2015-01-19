@@ -15,56 +15,36 @@
 # limitations under the License
 
 AUTOMAKE_OPTIONS = subdir-objects
+ACLOCAL_AMFLAGS = -I m4
 
-MESOS_ROOT_DIR=@MESOS_ROOT@
-MESOS_BUILD_DIR=@MESOS_BUILD_DIR@
-
-LIBPROCESS = $(MESOS_ROOT_DIR)/3rdparty/libprocess
-STOUT = $(LIBPROCESS)/3rdparty/stout
-
-# Unfortunatley, 'pkglibexecdir' and 'pkgsysconfdir' are not set
-# before automake 1.11, so we need to set them manually (until we in
-# the future assume an automake version).
-pkglibexecdir = $(libexecdir)/$(PACKAGE)
-pkgsysconfdir = $(sysconfdir)/$(PACKAGE)
+# We want to install modules in mesos directory.
+pkglibdir = $(libdir)/mesos
 
 # Initialize variables here so we can use += operator everywhere else.
-lib_LTLIBRARIES =
+pkglib_LTLIBRARIES =
 
 # Add compiler and linker flags for pthreads.
 AM_CXXFLAGS = $(PTHREAD_CFLAGS)
 AM_LIBS = $(PTHREAD_LIBS)
 
 # Setup CPPFLAGS that are used for most source files.
-MESOS_CPPFLAGS = $(AM_CPPFLAGS)
-MESOS_CPPFLAGS += -Wall -Werror
-MESOS_CPPFLAGS += -DLIBDIR=\"$(libdir)\"
-MESOS_CPPFLAGS += -DPKGLIBEXECDIR=\"$(pkglibexecdir)\"
-MESOS_CPPFLAGS += -DPKGDATADIR=\"$(pkgdatadir)\"
-
-MESOS_CPPFLAGS += -I$(MESOS_ROOT_DIR)/src
-MESOS_CPPFLAGS += -I$(MESOS_ROOT_DIR)/include
-MESOS_CPPFLAGS += -I$(MESOS_BUILD_DIR)/src
-MESOS_CPPFLAGS += -I$(MESOS_BUILD_DIR)/include
-MESOS_CPPFLAGS += -I$(LIBPROCESS)/include
-MESOS_CPPFLAGS += -I$(STOUT)/include
-
-MESOS_CPPFLAGS += -I$(MESOS_BUILD_DIR)/include
-
-# Library containing test CPU and memory isolator modules.
-lib_LTLIBRARIES += libtestisolator.la
-libtestisolator_la_SOURCES = isolator/test_isolator_module.cpp
-libtestisolator_la_CPPFLAGS = $(MESOS_CPPFLAGS)
-libtestisolator_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared
+AM_CPPFLAGS = $(MESOS_CPPFLAGS) -Wall -Werror
 
 # Library containing the test CRAM-MD5 authentication modules.
 # TODO(tillt): Add cyrus-sasl2 dependency while removing it from libmesos.
 # TODO(tillt): Enable optional building of this module library.
 # TODO(tillt): Make this module library installable. See MESOS-1940.
-lib_LTLIBRARIES += libtestauthentication.la
+pkglib_LTLIBRARIES += libtestauthentication.la
 libtestauthentication_la_SOURCES = authentication/test_authentication_modules.cpp \
 				   authentication/cram_md5/auxprop.cpp
-libtestauthentication_la_CPPFLAGS = $(MESOS_CPPFLAGS)
 libtestauthentication_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared
 
-.PHONY: $(PHONY_TARGETS)
+# Library containing test CPU and memory isolator modules.
+pkglib_LTLIBRARIES += libtestisolator.la
+libtestisolator_la_SOURCES = isolator/test_isolator_module.cpp
+libtestisolator_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared
+
+# Library containing test hook module.
+pkglib_LTLIBRARIES += libtesthook.la
+libtesthook_la_SOURCES = hook/test_hook_module.cpp
+libtesthook_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared
