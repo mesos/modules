@@ -18,6 +18,7 @@
 
 #include <mesos/mesos.hpp>
 #include <mesos/module.hpp>
+#include <mesos/type_utils.hpp>
 
 #include <mesos/slave/isolator.hpp>
 #include <mesos/slave/state.hpp>
