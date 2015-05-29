@@ -37,14 +37,14 @@ AM_CPPFLAGS = $(MESOS_CPPFLAGS) -Wall -Werror
 pkglib_LTLIBRARIES += libtestauthentication.la
 libtestauthentication_la_SOURCES = authentication/test_authentication_modules.cpp \
 				   authentication/cram_md5/auxprop.cpp
-libtestauthentication_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared
+libtestauthentication_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared -lmesos
 
 # Library containing test CPU and memory isolator modules.
 pkglib_LTLIBRARIES += libtestisolator.la
 libtestisolator_la_SOURCES = isolator/test_isolator_module.cpp
-libtestisolator_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared
+libtestisolator_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared -lmesos
 
 # Library containing test hook module.
 pkglib_LTLIBRARIES += libtesthook.la
 libtesthook_la_SOURCES = hook/test_hook_module.cpp
-libtesthook_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared
+libtesthook_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared -lmesos
