@@ -3,6 +3,9 @@
 ## Build Mesos with some unbundled dependencies
 
 ### Preparing Mesos source code
+
+This step is optional you can build modules with Mesos installed from packages.
+
 First we need to prepare Mesos source code.  You can either download the Mesos
 standard release in the form of a tarball and extract it, or clone the git
 repository.
@@ -47,3 +50,22 @@ make
 ```
 
 At this point, the Module libraries are ready in `/build/.libs`.
+
+## Dependencies
+
+* [Boost](http://www.boost.org/)
+* [Protobuf](https://github.com/google/protobuf)
+* [glog](https://github.com/google/glog)
+* [picojson](https://github.com/kazuho/picojson)
+
+You can install it with following commands 
+
+    apt-get -y install ruby ruby-dev python-dev autoconf automake git git-core \
+      make libssl-dev libcurl3 libtool build-essential openjdk-7-jdk python-boto \
+      libcurl4-openssl-dev libsasl2-dev maven libapr1-dev libsvn-dev flex bison \
+      devscripts python-setuptools python-pip vim htop \
+      libprotobuf-dev libgflags-dev libgoogle-glog-dev liblmdb-dev libboost-all-dev \
+      mesos marathon zookeeper
+    cd tmp && git clone https://github.com/kazuho/picojson.git && cd picojson
+    make
+    sudo make install
