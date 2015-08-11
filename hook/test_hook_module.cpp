@@ -61,27 +61,14 @@ public:
   // environment variable.  Later on, this environment variable is
   // looked up by the removeExecutorHook to locate and delete this
   // file.
-  virtual Result<Environment> slaveLaunchExecutorEnvironmentDecorator(
-      const ExecutorInfo& executorInfo,
-      const TaskInfo& taskInfo)
+  virtual Result<Environment> slaveExecutorEnvironmentDecorator(
+          const ExecutorInfo& executorInfo)
   {
     LOG(INFO) << "Executing 'slaveLaunchExecutorEnvironmentDecorator' hook";
-
-    // Find the label value for the label that was created in the
-    // label decorator hook above.
-    Option<string> labelValue;
-    foreach (const Label& label, taskInfo.labels().labels()) {
-      if (label.key() == testLabelKey) {
-        labelValue = label.value();
-        CHECK_EQ(labelValue.get(), testLabelValue);
-      }
-    }
-    CHECK_SOME(labelValue);
 
     // Create a temporary file.
     Try<string> file = os::mktemp();
     CHECK_SOME(file);
-    CHECK_SOME(os::write(file.get(), labelValue.get()));
 
     // Inject file path into command environment.
     Environment environment;
