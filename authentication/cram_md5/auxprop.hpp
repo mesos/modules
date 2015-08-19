@@ -19,6 +19,7 @@
 #ifndef __AUTHENTICATION_CRAM_MD5_AUXPROP_HPP__
 #define __AUTHENTICATION_CRAM_MD5_AUXPROP_HPP__
 
+#include <mutex>
 #include <string>
 
 #include <sasl/sasl.h>
@@ -28,6 +29,7 @@
 #include <stout/multimap.hpp>
 #include <stout/none.hpp>
 #include <stout/option.hpp>
+#include <stout/synchronized.hpp>
 
 namespace mesos {
 namespace internal {
@@ -47,20 +49,25 @@ public:
 
   static void load(const Multimap<std::string, Property>& _properties)
   {
-    properties = _properties;
+    synchronized (mutex) {
+      properties = _properties;
+    }
   }
 
-  static Option<std::list<std::string> > lookup(
+  static Option<std::list<std::string>> lookup(
       const std::string& user,
       const std::string& name)
   {
-    if (properties.contains(user)) {
-      foreach (const Property& property, properties.get(user)) {
-        if (property.name == name) {
-          return property.values;
+    synchronized (mutex) {
+      if (properties.contains(user)) {
+        foreach (const Property& property, properties.get(user)) {
+          if (property.name == name) {
+            return property.values;
+          }
         }
       }
     }
+
     return None();
   }
 
@@ -84,9 +91,15 @@ private:
       const char* user,
       unsigned length);
 
+  // TODO(tillt): For allowing multiple authenticators with differing
+  // credentials, consider using a non-static credential properties.
   static Multimap<std::string, Property> properties;
 
   static sasl_auxprop_plug_t plugin;
+
+  // Access to 'properties' has to be protected as multiple
+  // authenticator instances may be active concurrently.
+  static std::mutex mutex;
 };
 
 } // namespace cram_md5 {

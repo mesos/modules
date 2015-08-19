@@ -1,0 +1,15 @@
+{
+  "libraries": [
+    {
+      "file": "@abs_top_builddir@/.libs/libtestauthentication.@LIB_EXT@",
+      "modules": [
+        {
+          "name": "org_apache_mesos_TestCRAMMD5Authenticator"
+        },
+        {
+          "name": "org_apache_mesos_TestCRAMMD5Authenticatee"
+        }
+      ]
+    }
+  ]
+}

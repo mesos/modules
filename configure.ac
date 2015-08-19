@@ -1,4 +1,4 @@
-AC_INIT([MesosModules],[0.1])
+AC_INIT([metaswitch-modules],[0.1])
 AC_PREREQ([2.69])
 AC_CONFIG_FILES([Makefile])
 AC_LANG([C++])
@@ -8,6 +8,8 @@ AC_PROG_CC_C_O
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([foreign])
+
+AX_PYTHON_DEVEL([])
 
 LT_PREREQ([2.2])
 LT_INIT
@@ -34,6 +36,7 @@ AC_ARG_WITH([mesos_build_dir],
 
 if test -d "$mesos"; then
   MESOS_CPPFLAGS="-I${mesos}/include"
+  MESOS_LDFLAGS="-L${mesos}/lib64 -lmesos -lglog -lprotobuf"
 else
 
   if test -d "$mesos_root"; then
@@ -58,6 +61,20 @@ else
 fi
 
 AC_SUBST(MESOS_CPPFLAGS)
+AC_SUBST(MESOS_LDFLAGS)
+
+# Check if we are on OSX or Linux.
+case "$host_os" in
+  linux*)
+    LIB_EXT="so"
+    ;;
+  darwin*)
+    LIB_EXT="dylib"
+    ;;
+  *)
+  AC_MSG_ERROR("Mesosphere's Modules are currently unsupported on your platform.")
+esac
+AC_SUBST(LIB_EXT)
 
 # Check if we're using clang.
 AC_MSG_CHECKING([if compiling with clang])
@@ -123,5 +140,30 @@ fi
 # CXXFLAG as appropriate.
 AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])
 
+# Check if headers and library were located.
+AC_CHECK_HEADER([glog/logging.h],
+                [AC_LINK_IFELSE(
+                    [AC_LANG_PROGRAM([#include <glog/logging.h>], [])],
+                    [],
+                    [AC_MSG_ERROR([glog is not installed.])])],
+                [AC_MSG_ERROR([cannot find glog header.])])
+
+AC_CHECK_HEADER([google/protobuf/message.h],
+                [AC_LINK_IFELSE(
+                    [AC_LANG_PROGRAM([#include <google/protobuf/message.h>], [])],
+                    [],
+                    [AC_MSG_ERROR([google protobuf is not installed.])])],
+                [AC_MSG_ERROR([google protobuf is not installed.])])
+
+AC_CHECK_HEADER([picojson.h],
+                [],
+                [AC_MSG_ERROR([picojson is not installed.])])
+
+AC_CHECK_HEADERS([boost/lexical_cast.hpp boost/functional/hash.hpp],
+                [],
+                [AC_MSG_ERROR([boost is not installed.])])
+
+# Create Modules JSON blobs.
+AC_CONFIG_FILES([isolator/modules.json], [])
 
 AC_OUTPUT

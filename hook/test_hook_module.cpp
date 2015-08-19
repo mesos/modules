@@ -16,27 +16,29 @@
  * limitations under the License.
  */
 
-#include <string>
-
 #include <mesos/hook.hpp>
 #include <mesos/mesos.hpp>
 #include <mesos/module.hpp>
 
 #include <mesos/module/hook.hpp>
 
+#include <process/future.hpp>
+#include <process/process.hpp>
+#include <process/protobuf.hpp>
+
 #include <stout/foreach.hpp>
 #include <stout/os.hpp>
 #include <stout/try.hpp>
 
-using std::string;
-
 using namespace mesos;
+
+using process::Future;
 
 // Must be kept in sync with variables of the same name in
 // tests/hook_tests.cpp.
 const char* testLabelKey = "MESOS_Test_Label";
 const char* testLabelValue = "ApacheMesos";
-const char* testEnvironmentVariableName = "MESOS_TEST_ENVIRONMENT_VARIABLE";
+const char* testRemoveLabelKey = "MESOS_Test_Remove_Label";
 
 class TestHook : public Hook
 {
@@ -49,71 +51,99 @@ public:
     LOG(INFO) << "Executing 'masterLaunchTaskLabelDecorator' hook";
 
     Labels labels;
-    Label *label = labels.add_labels();
-    label->set_key(testLabelKey);
-    label->set_value(testLabelValue);
+
+    // Set one known label.
+    Label* newLabel = labels.add_labels();
+    newLabel->set_key(testLabelKey);
+    newLabel->set_value(testLabelValue);
+
+    // Remove the 'testRemoveLabelKey' label which was set by the test.
+    foreach (const Label& oldLabel, taskInfo.labels().labels()) {
+      if (oldLabel.key() != testRemoveLabelKey) {
+        labels.add_labels()->CopyFrom(oldLabel);
+      }
+    }
 
     return labels;
   }
 
-
-  // In this hook, we create a temporary file and add its path to an
-  // environment variable.  Later on, this environment variable is
-  // looked up by the removeExecutorHook to locate and delete this
-  // file.
-  virtual Result<Environment> slaveLaunchExecutorEnvironmentDecorator(
+  virtual Result<Labels> slaveRunTaskLabelDecorator(
+      const TaskInfo& taskInfo,
       const ExecutorInfo& executorInfo,
-      const TaskInfo& taskInfo)
+      const FrameworkInfo& frameworkInfo,
+      const SlaveInfo& slaveInfo)
   {
-    LOG(INFO) << "Executing 'slaveLaunchExecutorEnvironmentDecorator' hook";
+    LOG(INFO) << "Executing 'slaveRunTaskLabelDecorator' hook";
 
-    // Find the label value for the label that was created in the
-    // label decorator hook above.
-    Option<string> labelValue;
-    foreach (const Label& label, taskInfo.labels().labels()) {
-      if (label.key() == testLabelKey) {
-        labelValue = label.value();
-        CHECK_EQ(labelValue.get(), testLabelValue);
+    Labels labels;
+
+    // Set one known label.
+    Label* newLabel = labels.add_labels();
+    newLabel->set_key("baz");
+    newLabel->set_value("qux");
+
+    // Remove label which was set by test.
+    foreach (const Label& oldLabel, taskInfo.labels().labels()) {
+      if (oldLabel.key() != "foo") {
+        labels.add_labels()->CopyFrom(oldLabel);
       }
     }
-    CHECK_SOME(labelValue);
 
-    // Create a temporary file.
-    Try<string> file = os::mktemp();
-    CHECK_SOME(file);
-    CHECK_SOME(os::write(file.get(), labelValue.get()));
+    return labels;
+  }
 
-    // Inject file path into command environment.
+  // In this hook, we create a new environment variable "FOO" and set
+  // it's value to "bar".
+  virtual Result<Environment> slaveExecutorEnvironmentDecorator(
+      const ExecutorInfo& executorInfo)
+  {
+    LOG(INFO) << "Executing 'slaveExecutorEnvironmentDecorator' hook";
+
     Environment environment;
+
+    if (executorInfo.command().has_environment()) {
+      environment.CopyFrom(executorInfo.command().environment());
+    }
+
     Environment::Variable* variable = environment.add_variables();
-    variable->set_name(testEnvironmentVariableName);
-    variable->set_value(file.get());
+    variable->set_name("FOO");
+    variable->set_value("bar");
 
     return environment;
   }
 
-
-  // This hook locates the file created by environment decorator hook
-  // and deletes it.
+  // This hook is called when the executor is being removed.
   virtual Try<Nothing> slaveRemoveExecutorHook(
       const FrameworkInfo& frameworkInfo,
       const ExecutorInfo& executorInfo)
   {
     LOG(INFO) << "Executing 'slaveRemoveExecutorHook'";
 
-    foreach (const Environment::Variable& variable,
-        executorInfo.command().environment().variables()) {
-      if (variable.name() == testEnvironmentVariableName) {
-        string path = variable.value();
-        // The removeExecutor hook may be called multiple times; thus
-        // we ignore the subsequent calls.
-        if (os::isfile(path)) {
-          CHECK_SOME(os::rm(path));
-        }
-        break;
+    return Nothing();
+  }
+
+
+  virtual Result<Labels> slaveTaskStatusLabelDecorator(
+      const FrameworkID& frameworkId,
+      const TaskStatus& status)
+  {
+    LOG(INFO) << "Executing 'slaveTaskStatusLabelDecorator' hook";
+
+    Labels labels;
+
+    // Set one known label.
+    Label* newLabel = labels.add_labels();
+    newLabel->set_key("bar");
+    newLabel->set_value("qux");
+
+    // Remove label which was set by test.
+    foreach (const Label& oldLabel, status.labels().labels()) {
+      if (oldLabel.key() != "foo") {
+        labels.add_labels()->CopyFrom(oldLabel);
       }
     }
-    return Nothing();
+
+    return labels;
   }
 };
 
@@ -124,7 +154,7 @@ static Hook* createHook(const Parameters& parameters)
 }
 
 
-// Declares a Hook module named 'TestHook'.
+// Declares a Hook module named 'org_apache_mesos_TestHook'.
 mesos::modules::Module<Hook> org_apache_mesos_TestHook(
     MESOS_MODULE_API_VERSION,
     MESOS_VERSION,

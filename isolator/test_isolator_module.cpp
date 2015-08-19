@@ -17,187 +17,134 @@
  */
 
 #include <mesos/mesos.hpp>
-#include <mesos/module.hpp>
-#include <mesos/type_utils.hpp>
-
-#include <mesos/slave/isolator.hpp>
 
 #include <mesos/module/isolator.hpp>
 
+#include <mesos/slave/isolator.hpp>
+
+#include <process/future.hpp>
+#include <process/owned.hpp>
+#include <process/process.hpp>
+
 #include <stout/try.hpp>
+#include <stout/option.hpp>
+
+#include "test_isolator_module.hpp"
 
 using namespace mesos;
 using namespace mesos::slave;
 
-
-// A basic IsolatorProcess that keeps track of the pid but doesn't do any
-// resource isolation. Subclasses must implement usage() for their appropriate
+// A basic Isolator that keeps track of the pid but doesn't do any resource
+// isolation. Subclasses must implement usage() for their appropriate
 // resource(s).
-class PosixIsolatorProcess : public IsolatorProcess
+
+Try<mesos::slave::Isolator*> TestIsolatorProcess::create(
+    const Parameters& parameters)
 {
-public:
-  virtual process::Future<Nothing> recover(
-      const std::list<ExecutorRunState>& state)
-  {
-    foreach (const ExecutorRunState& run, state) {
-      // This should (almost) never occur: see comment in
-      // PosixLauncher::recover().
-      if (pids.contains(run.id)) {
-        return process::Failure("Container already recovered");
-      }
+  return new TestIsolator(process::Owned<TestIsolatorProcess>(
+      new TestIsolatorProcess(parameters)));
+}
 
-      pids.put(run.id, run.pid);
-
-      process::Owned<process::Promise<Limitation> > promise(
-          new process::Promise<Limitation>());
-      promises.put(run.id, promise);
+process::Future<Nothing> TestIsolatorProcess::recover(
+    const std::list<ContainerState>& states,
+    const hashset<ContainerID>& orphans)
+{
+  foreach (const ContainerState& run, states) {
+    // This should (almost) never occur: see comment in
+    // PosixLauncher::recover().
+    if (pids.contains(run.container_id())) {
+      return process::Failure("Container already recovered");
     }
 
-    return Nothing();
+    pids.put(run.container_id(), run.pid());
+
+    process::Owned<process::Promise<ContainerLimitation>> promise(
+        new process::Promise<ContainerLimitation>());
+    promises.put(run.container_id(), promise);
   }
 
-  virtual process::Future<Option<CommandInfo> > prepare(
+  return Nothing();
+}
+
+process::Future<Option<mesos::slave::ContainerPrepareInfo>>
+  TestIsolatorProcess::prepare(
       const ContainerID& containerId,
       const ExecutorInfo& executorInfo,
       const std::string& directory,
       const Option<std::string>& user)
-  {
-    if (promises.contains(containerId)) {
-      return process::Failure("Container " + stringify(containerId) +
-                              " has already been prepared");
-    }
-
-    process::Owned<process::Promise<Limitation> > promise(
-        new process::Promise<Limitation>());
-    promises.put(containerId, promise);
-
-    return None();
-  }
-
-  virtual process::Future<Nothing> isolate(
-      const ContainerID& containerId,
-      pid_t pid)
-  {
-    if (!promises.contains(containerId)) {
-      return process::Failure("Unknown container: " + stringify(containerId));
-    }
-
-    pids.put(containerId, pid);
-
-    return Nothing();
-  }
-
-  virtual process::Future<Limitation> watch(
-      const ContainerID& containerId)
-  {
-    if (!promises.contains(containerId)) {
-      return process::Failure("Unknown container: " + stringify(containerId));
-    }
-
-    return promises[containerId]->future();
-  }
-
-  virtual process::Future<Nothing> update(
-      const ContainerID& containerId,
-      const Resources& resources)
-  {
-    if (!promises.contains(containerId)) {
-      return process::Failure("Unknown container: " + stringify(containerId));
-    }
-
-    // No resources are actually isolated so nothing to do.
-    return Nothing();
-  }
-
-  virtual process::Future<Nothing> cleanup(const ContainerID& containerId)
-  {
-    if (!promises.contains(containerId)) {
-      return process::Failure("Unknown container: " + stringify(containerId));
-    }
-
-    // TODO(idownes): We should discard the container's promise here to signal
-    // to anyone that holds the future from watch().
-    promises.erase(containerId);
-
-    pids.erase(containerId);
-
-    return Nothing();
-  }
-
-protected:
-  hashmap<ContainerID, pid_t> pids;
-  hashmap<ContainerID,
-          process::Owned<process::Promise<Limitation> > > promises;
-};
-
-
-class PosixCpuIsolatorProcess : public PosixIsolatorProcess
 {
-public:
-  static Try<Isolator*> create()
-  {
-    process::Owned<IsolatorProcess> process(new PosixCpuIsolatorProcess());
-
-    return new Isolator(process);
+  if (promises.contains(containerId)) {
+    return process::Failure("Container " + stringify(containerId) +
+                            " has already been prepared");
   }
 
-  virtual process::Future<ResourceStatistics> usage(
-      const ContainerID& containerId)
-  {
-    if (!pids.contains(containerId)) {
-      LOG(WARNING) << "No resource usage for unknown container '"
-                   << containerId << "'";
-      return ResourceStatistics();
-    }
+  process::Owned<process::Promise<ContainerLimitation>> promise(
+      new process::Promise<ContainerLimitation>());
+  promises.put(containerId, promise);
 
-    // Use 'mesos-usage' but only request 'cpus_' values.
-    ResourceStatistics usage;
-    return usage;
-//      mesos::internal::usage(pids.get(containerId).get(), false, true);
-//    if (usage.isError()) {
-//      return process::Failure(usage.error());
-//    }
-//    return usage.get();
-  }
+  return None();
+}
 
-private:
-  PosixCpuIsolatorProcess() {}
-};
-
-
-class PosixMemIsolatorProcess : public PosixIsolatorProcess
+process::Future<Nothing> TestIsolatorProcess::isolate(
+    const ContainerID& containerId,
+    pid_t pid)
 {
-public:
-  static Try<Isolator*> create()
-  {
-    process::Owned<IsolatorProcess> process(new PosixMemIsolatorProcess());
-
-    return new Isolator(process);
+  if (!promises.contains(containerId)) {
+    return process::Failure("Unknown container: " + stringify(containerId));
   }
 
-  virtual process::Future<ResourceStatistics> usage(
-      const ContainerID& containerId)
-  {
-    if (!pids.contains(containerId)) {
-      LOG(WARNING) << "No resource usage for unknown container '"
-                   << containerId << "'";
-      return ResourceStatistics();
-    }
+  pids.put(containerId, pid);
 
-    ResourceStatistics usage;
-    return usage;
-//    // Use 'mesos-usage' but only request 'mem_' values.
-//    Try<ResourceStatistics> usage =
-//      mesos::internal::usage(pids.get(containerId).get(), true, false);
-//    if (usage.isError()) {
-//      return process::Failure(usage.error());
-//    }
-//    return usage.get();
+  return Nothing();
+}
+
+process::Future<ContainerLimitation> TestIsolatorProcess::watch(
+    const ContainerID& containerId)
+{
+  if (!promises.contains(containerId)) {
+    return process::Failure("Unknown container: " + stringify(containerId));
   }
 
-private:
-  PosixMemIsolatorProcess() {}
-};
+  return promises[containerId]->future();
+}
+
+process::Future<Nothing> TestIsolatorProcess::update(
+    const ContainerID& containerId,
+    const Resources& resources)
+{
+  if (!promises.contains(containerId)) {
+    return process::Failure("Unknown container: " + stringify(containerId));
+  }
+
+  // No resources are actually isolated so nothing to do.
+  return Nothing();
+}
+
+process::Future<ResourceStatistics> TestIsolatorProcess::usage(
+    const ContainerID& containerId)
+{
+  if (!pids.contains(containerId)) {
+    LOG(WARNING) << "No resource usage for unknown container '"
+                 << containerId << "'";
+  }
+  return ResourceStatistics();
+}
+
+process::Future<Nothing> TestIsolatorProcess::cleanup(
+    const ContainerID& containerId)
+{
+  if (!promises.contains(containerId)) {
+    return process::Failure("Unknown container: " + stringify(containerId));
+  }
+
+  // TODO(idownes): We should discard the container's promise here to signal
+  // to anyone that holds the future from watch().
+  promises.erase(containerId);
+
+  pids.erase(containerId);
+
+  return Nothing();
+}
 
 
 // The sole purpose of this function is just to exercise the
@@ -208,19 +155,9 @@ static bool compatible()
 }
 
 
-static Isolator* createCpuIsolator(const Parameters& parameters)
+static Isolator* createTestIsolator(const Parameters& parameters)
 {
-  Try<Isolator*> result = PosixCpuIsolatorProcess::create();
-  if (result.isError()) {
-    return NULL;
-  }
-  return result.get();
-}
-
-
-static Isolator* createMemIsolator(const Parameters& parameters)
-{
-  Try<Isolator*> result = PosixMemIsolatorProcess::create();
+  Try<Isolator*> result = TestIsolatorProcess::create(parameters);
   if (result.isError()) {
     return NULL;
   }
@@ -229,22 +166,11 @@ static Isolator* createMemIsolator(const Parameters& parameters)
 
 
 // Declares a CPU Isolator module named 'testCpuIsolator'.
-mesos::modules::Module<Isolator> org_apache_mesos_TestCpuIsolator(
+mesos::modules::Module<Isolator> org_apache_mesos_TestIsolator(
     MESOS_MODULE_API_VERSION,
     MESOS_VERSION,
     "Apache Mesos",
     "modules@mesos.apache.org",
-    "Test CPU Isolator module.",
+    "Test Isolator module.",
     compatible,
-    createCpuIsolator);
-
-
-// Declares a Memory Isolator module named 'testMemIsolator'.
-mesos::modules::Module<Isolator> org_apache_mesos_TestMemIsolator(
-    MESOS_MODULE_API_VERSION,
-    MESOS_VERSION,
-    "Apache Mesos",
-    "modules@mesos.apache.org",
-    "Test Memory Isolator module.",
-    NULL, // Do not perform any compatibility check.
-    createMemIsolator);
+    createTestIsolator);

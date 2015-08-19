@@ -1,0 +1,15 @@
+{
+  "libraries": [
+    {
+      "file": "@abs_top_builddir@/.libs/libtestisolator.@LIB_EXT@",
+      "modules": [
+        {
+          "name": "org_apache_mesos_TestCpuIsolator"
+        },
+        {
+          "name": "org_apache_mesos_TestMemIsolator"
+        }
+      ]
+    }
+  ]
+}

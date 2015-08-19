@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-#include <glog/logging.h> // Includes LOG(*), PLOG(*), CHECK, etc.
-
 #include "authentication/cram_md5/auxprop.hpp"
+
+#include <mutex>
 
 using std::list;
 using std::string;
@@ -30,6 +30,7 @@ namespace cram_md5 {
 // Storage for the static members.
 Multimap<string, Property> InMemoryAuxiliaryPropertyPlugin::properties;
 sasl_auxprop_plug_t InMemoryAuxiliaryPropertyPlugin::plugin;
+std::mutex InMemoryAuxiliaryPropertyPlugin::mutex;
 
 
 int InMemoryAuxiliaryPropertyPlugin::initialize(
@@ -82,7 +83,7 @@ int InMemoryAuxiliaryPropertyPlugin::initialize(
 
   // We determine the properties we should be looking up by doing a
   // 'prop_get' on the property context. Note that some of the
-  // properties we get might might need to be skipped depending on the
+  // properties we get might need to be skipped depending on the
   // flags (see below).
   const propval* properties = utils->prop_get(sparams->propctx);
 
