@@ -36,7 +36,11 @@ AC_ARG_WITH([mesos_build_dir],
 
 if test -d "$mesos"; then
   MESOS_CPPFLAGS="-I${mesos}/include"
-  MESOS_LDFLAGS="-L${mesos}/lib64 -lmesos -lglog -lprotobuf"
+  if test -d "${mesos}/lib"; then
+    MESOS_LDFLAGS="-L${mesos}/lib -lmesos -lglog -lprotobuf"
+  else
+    MESOS_LDFLAGS="-L${mesos}/lib64 -lmesos -lglog -lprotobuf"
+  fi
 else
 
   if test -d "$mesos_root"; then
