@@ -64,6 +64,9 @@ else
   fi
 fi
 
+basedir=$(cd $(dirname $0) && pwd)
+MESOS_CPPFLAGS="${MESOS_CPPFLAGS} -I${basedir}/3rdparty/picojson"
+
 AC_SUBST(MESOS_CPPFLAGS)
 AC_SUBST(MESOS_LDFLAGS)
 
@@ -158,10 +161,6 @@ AC_CHECK_HEADER([google/protobuf/message.h],
                     [],
                     [AC_MSG_ERROR([google protobuf is not installed.])])],
                 [AC_MSG_ERROR([google protobuf is not installed.])])
-
-AC_CHECK_HEADER([picojson.h],
-                [],
-                [AC_MSG_ERROR([picojson is not installed.])])
 
 AC_CHECK_HEADERS([boost/lexical_cast.hpp boost/functional/hash.hpp],
                 [],
