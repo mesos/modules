@@ -46,7 +46,7 @@ Try<mesos::slave::Isolator*> TestIsolatorProcess::create(
 }
 
 process::Future<Nothing> TestIsolatorProcess::recover(
-    const std::list<ContainerState>& states,
+    const std::vector<ContainerState>& states,
     const hashset<ContainerID>& orphans)
 {
   foreach (const ContainerState& run, states) {
@@ -66,12 +66,10 @@ process::Future<Nothing> TestIsolatorProcess::recover(
   return Nothing();
 }
 
-process::Future<Option<mesos::slave::ContainerPrepareInfo>>
+process::Future<Option<mesos::slave::ContainerLaunchInfo>>
   TestIsolatorProcess::prepare(
       const ContainerID& containerId,
-      const ExecutorInfo& executorInfo,
-      const std::string& directory,
-      const Option<std::string>& user)
+      const mesos::slave::ContainerConfig& containerConfig)
 {
   if (promises.contains(containerId)) {
     return process::Failure("Container " + stringify(containerId) +
