@@ -34,30 +34,39 @@ AC_ARG_WITH([mesos_build_dir],
             [mesos_build_dir=$withval],
             [mesos_build_dir=no])
 
+MESOS_CPPFLAGS=""
+MESOS_LDFLAGS=""
+
 if test -d "$mesos"; then
-  MESOS_CPPFLAGS="-I${mesos}/include"
+  MESOS_CPPFLAGS+=" -I${mesos}/include"
   if test -d "${mesos}/lib"; then
-    MESOS_LDFLAGS="-L${mesos}/lib -lmesos -lglog -lprotobuf"
+    MESOS_LDFLAGS+=" -L${mesos}/lib -lmesos -lglog -lprotobuf"
   else
-    MESOS_LDFLAGS="-L${mesos}/lib64 -lmesos -lglog -lprotobuf"
+    MESOS_LDFLAGS+=" -L${mesos}/lib64 -lmesos -lglog -lprotobuf"
   fi
 else
 
   if test -d "$mesos_root"; then
-    MESOS_CPPFLAGS="${MESOS_CPPFLAGS} -I${mesos_root}/include"
+    MESOS_CPPFLAGS+=" -I${mesos_root}/include"
+
+    # Add src to include path.
+    MESOS_CPPFLAGS+=" -I${mesos_root}/src"
 
     # Add libprocess to include path.
-    MESOS_CPPFLAGS="${MESOS_CPPFLAGS} -I${mesos_root}/3rdparty/libprocess/include"
+    MESOS_CPPFLAGS+=" -I${mesos_root}/3rdparty/libprocess/include"
 
     # Add stout to include path.
-    MESOS_CPPFLAGS="${MESOS_CPPFLAGS} -I${mesos_root}/3rdparty/libprocess/3rdparty/stout/include"
+    MESOS_CPPFLAGS+=" -I${mesos_root}/3rdparty/stout/include"
   else
     AC_MSG_ERROR([Invalid mesos path; use --with-mesos-root=<DIR>
                   <DIR> is the top-level directory of the Mesos distribution.])
   fi
 
   if test -d "$mesos_build_dir"; then
-    MESOS_CPPFLAGS="${MESOS_CPPFLAGS} -I${mesos_build_dir}/include"
+    MESOS_CPPFLAGS+=" -I${mesos_build_dir}/include"
+
+    # Add src to include path.
+    MESOS_CPPFLAGS+=" -I${mesos_build_dir}/src"
   else
     AC_MSG_ERROR([Invalid mesos build path; use --with-mesos-build-dir=<DIR>
                   <DIR> is the Mesos build directory.])
