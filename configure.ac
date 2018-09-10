@@ -178,6 +178,8 @@ AC_CHECK_HEADERS([boost/lexical_cast.hpp boost/functional/hash.hpp],
 
 # Create Modules JSON blobs.
 AC_CONFIG_FILES([authentication/cram_md5/modules.json], [])
+AC_CONFIG_FILES([authentication/kerberos/authenticatee_module.json], [])
+AC_CONFIG_FILES([authentication/kerberos/authenticator_module.json], [])
 AC_CONFIG_FILES([hook/modules.json], [])
 AC_CONFIG_FILES([isolator/modules.json], [])
 

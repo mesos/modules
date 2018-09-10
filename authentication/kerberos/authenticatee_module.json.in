@@ -1,0 +1,14 @@
+{
+  "libraries":
+  [
+    {
+      "file": "@abs_top_builddir@/.libs/libkerberosauth.@LIB_EXT@",
+      "modules":
+      [
+        {
+          "name": "com_mesosphere_mesos_GSSAPIAuthenticatee"
+        }
+      ]
+    }
+  ]
+}
