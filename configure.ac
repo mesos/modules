@@ -65,7 +65,7 @@ else
   if test -d "$mesos_build_dir"; then
     MESOS_CPPFLAGS+=" -I${mesos_build_dir}/include"
 
-    # Add src to include path.
+    # Add src to include path - only needed for mock-tests.
     MESOS_CPPFLAGS+=" -I${mesos_build_dir}/src"
   else
     AC_MSG_ERROR([Invalid mesos build path; use --with-mesos-build-dir=<DIR>
@@ -178,5 +178,6 @@ AC_CHECK_HEADERS([boost/lexical_cast.hpp boost/functional/hash.hpp],
 
 # Create Modules JSON blobs.
 AC_CONFIG_FILES([isolator/modules.json], [])
+AC_CONFIG_FILES([authentication/cram_md5/modules.json], [])
 
 AC_OUTPUT

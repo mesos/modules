@@ -35,14 +35,18 @@ AM_CPPFLAGS = $(MESOS_CPPFLAGS) -Wall -Werror
 # TODO(tillt): Enable optional building of this module library.
 # TODO(tillt): Make this module library installable. See MESOS-1940.
 pkglib_LTLIBRARIES += libtestauthentication.la
-libtestauthentication_la_SOURCES = authentication/test_authentication_modules.cpp \
-				   authentication/cram_md5/auxprop.cpp
-libtestauthentication_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared $(MESOS_LDFLAGS)
+libtestauthentication_la_SOURCES = 					\
+  authentication/cram_md5/test_authentication_modules.cpp 		\
+  authentication/cram_md5/auxprop.cpp
+
+libtestauthentication_la_LDFLAGS = 					\
+  -release $(PACKAGE_VERSION) -shared $(MESOS_LDFLAGS)
 
 # Library containing test CPU and memory isolator modules.
 pkglib_LTLIBRARIES += libtestisolator.la
 libtestisolator_la_SOURCES = isolator/test_isolator_module.cpp
-libtestisolator_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared $(MESOS_LDFLAGS)
+libtestisolator_la_LDFLAGS = 						\
+  -release $(PACKAGE_VERSION) -shared $(MESOS_LDFLAGS)
 
 # Library containing test hook module.
 pkglib_LTLIBRARIES += libtesthook.la
