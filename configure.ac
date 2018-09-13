@@ -151,7 +151,7 @@ fi
 
 # Ensure we can build the C++11 features we expect, and set the std
 # CXXFLAG as appropriate.
-AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])
+AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory])
 
 # Check if headers and library were located.
 AC_CHECK_HEADER([glog/logging.h],
