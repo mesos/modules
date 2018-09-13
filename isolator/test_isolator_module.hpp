@@ -45,14 +45,12 @@ public:
   ~TestIsolatorProcess() {}
 
   process::Future<Nothing> recover(
-      const std::list<mesos::slave::ContainerState>& states,
+      const std::vector<mesos::slave::ContainerState>& states,
       const hashset<ContainerID>& orphans);
 
-  process::Future<Option<mesos::slave::ContainerPrepareInfo>> prepare(
+  process::Future<Option<mesos::slave::ContainerLaunchInfo>> prepare(
       const ContainerID& containerId,
-      const ExecutorInfo& executorInfo,
-      const std::string& directory,
-      const Option<std::string>& user);
+      const mesos::slave::ContainerConfig& containerConfig);
 
   process::Future<Nothing> isolate(
       const ContainerID& containerId,
@@ -66,6 +64,9 @@ public:
       const Resources& resources);
 
   process::Future<ResourceStatistics> usage(
+      const ContainerID& containerId);
+
+  process::Future<ContainerStatus> status(
       const ContainerID& containerId);
 
   process::Future<Nothing> cleanup(
@@ -92,20 +93,26 @@ public:
     spawn(CHECK_NOTNULL(process.get()));
   }
 
-  virtual ~TestIsolator()
+  virtual ~TestIsolator() override
   {
     terminate(process.get());
     wait(process.get());
   }
 
-  virtual process::Future<Option<int>> namespaces()
+  virtual bool supportsNesting() override
   {
-    return None();
+    return false;
   }
 
+  virtual bool supportsStandalone() override
+  {
+    return false;
+  }
+
+
   virtual process::Future<Nothing> recover(
-      const std::list<mesos::slave::ContainerState>& states,
-      const hashset<ContainerID>& orphans)
+      const std::vector<mesos::slave::ContainerState>& states,
+      const hashset<ContainerID>& orphans) override
   {
     return dispatch(process.get(),
                     &TestIsolatorProcess::recover,
@@ -113,23 +120,19 @@ public:
                     orphans);
   }
 
-  virtual process::Future<Option<mesos::slave::ContainerPrepareInfo>> prepare(
+  virtual process::Future<Option<mesos::slave::ContainerLaunchInfo>> prepare(
       const ContainerID& containerId,
-      const ExecutorInfo& executorInfo,
-      const std::string& directory,
-      const Option<std::string>& user)
+      const mesos::slave::ContainerConfig& containerConfig) override
   {
     return dispatch(process.get(),
                     &TestIsolatorProcess::prepare,
                     containerId,
-                    executorInfo,
-                    directory,
-                    user);
+                    containerConfig);
   }
 
   virtual process::Future<Nothing> isolate(
       const ContainerID& containerId,
-      pid_t pid)
+      pid_t pid) override
   {
     return dispatch(process.get(),
                     &TestIsolatorProcess::isolate,
@@ -138,7 +141,7 @@ public:
   }
 
   virtual process::Future<mesos::slave::ContainerLimitation> watch(
-      const ContainerID& containerId)
+      const ContainerID& containerId) override
   {
     return dispatch(process.get(),
                     &TestIsolatorProcess::watch,
@@ -147,7 +150,7 @@ public:
 
   virtual process::Future<Nothing> update(
       const ContainerID& containerId,
-      const Resources& resources)
+      const Resources& resources) override
   {
     return dispatch(process.get(),
                     &TestIsolatorProcess::update,
@@ -156,7 +159,7 @@ public:
   }
 
   virtual process::Future<ResourceStatistics> usage(
-      const ContainerID& containerId)
+      const ContainerID& containerId) override
   {
     return dispatch(process.get(),
                     &TestIsolatorProcess::usage,
@@ -164,7 +167,7 @@ public:
   }
 
   virtual process::Future<Nothing> cleanup(
-      const ContainerID& containerId)
+      const ContainerID& containerId) override
   {
     return dispatch(process.get(),
                     &TestIsolatorProcess::cleanup,
