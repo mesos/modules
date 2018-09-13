@@ -42,6 +42,16 @@ libtestauthentication_la_SOURCES = 					\
 libtestauthentication_la_LDFLAGS = 					\
   -release $(PACKAGE_VERSION) -shared $(MESOS_LDFLAGS)
 
+# Library containing the kerberos authentication modules.
+pkglib_LTLIBRARIES += libkerberosauth.la
+libkerberosauth_la_SOURCES = 						\
+  authentication/kerberos/authenticatee.cpp				\
+  authentication/kerberos/authenticator.cpp				\
+  authentication/kerberos/kerberos_auth_mod.cpp
+
+libkerberosauth_la_LDFLAGS =                                            \
+	-release $(PACKAGE_VERSION) -shared $(MESOS_LDFLAGS)
+
 # Library containing test CPU and memory isolator modules.
 pkglib_LTLIBRARIES += libtestisolator.la
 libtestisolator_la_SOURCES = isolator/test_isolator_module.cpp
