@@ -62,3 +62,11 @@ libtestisolator_la_LDFLAGS = 						\
 pkglib_LTLIBRARIES += libtesthook.la
 libtesthook_la_SOURCES = hook/test_hook_module.cpp
 libtesthook_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared $(MESOS_LDFLAGS)
+
+# Library containing vault secretresolver module.
+pkglib_LTLIBRARIES += libvaultsecretsresolver.la
+libvaultsecretsresolver_la_SOURCES = \
+				   secretresolver/vault_secret_resolver_module.cpp \
+				   secretresolver/HttpClient.cpp \
+				   secretresolver/VaultClient.cpp
+libvaultsecretsresolver_la_LDFLAGS = -release $(PACKAGE_VERSION) -shared $(MESOS_LDFLAGS)

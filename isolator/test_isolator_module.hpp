@@ -19,6 +19,8 @@
 #ifndef __TEST_ISOLATOR_MODULE_HPP__
 #define __TEST_ISOLATOR_MODULE_HPP__
 
+#include <string>
+
 #include <mesos/mesos.hpp>
 
 #include <mesos/slave/isolator.hpp>
@@ -61,7 +63,8 @@ public:
 
   process::Future<Nothing> update(
       const ContainerID& containerId,
-      const Resources& resources);
+      const Resources& resourceRequests,
+      const google::protobuf::Map<std::string, Value::Scalar>& resourceLimits);
 
   process::Future<ResourceStatistics> usage(
       const ContainerID& containerId);
@@ -150,12 +153,15 @@ public:
 
   virtual process::Future<Nothing> update(
       const ContainerID& containerId,
-      const Resources& resources) override
+      const Resources& resourceRequests,
+      const google::protobuf::Map<
+          std::string, Value::Scalar>& resourceLimits = {}) override
   {
     return dispatch(process.get(),
                     &TestIsolatorProcess::update,
                     containerId,
-                    resources);
+                    resourceRequests,
+		    resourceLimits);
   }
 
   virtual process::Future<ResourceStatistics> usage(
