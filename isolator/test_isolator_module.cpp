@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#include <string>
+
 #include <mesos/mesos.hpp>
 
 #include <mesos/module/isolator.hpp>
@@ -108,7 +110,8 @@ process::Future<ContainerLimitation> TestIsolatorProcess::watch(
 
 process::Future<Nothing> TestIsolatorProcess::update(
     const ContainerID& containerId,
-    const Resources& resources)
+    const Resources& resourceRequests,
+    const google::protobuf::Map<std::string, Value::Scalar>& resourceLimits = {})
 {
   if (!promises.contains(containerId)) {
     return process::Failure("Unknown container: " + stringify(containerId));
